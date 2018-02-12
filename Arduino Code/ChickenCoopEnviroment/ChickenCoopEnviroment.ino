@@ -184,8 +184,8 @@ RTC_DS3231 rtcObj;
 
 // Setup our timezone object
 //US Eastern Time Zone (New York, Detroit)
-TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};    //Daylight time = UTC - 4 hour
-TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};     //Standard time = UTC - 5 hours
+TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};    //Daylight time = UTC - 4 hours
+TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};     //Standard time = UTC - 5 hour
 Timezone usEastern(usEDT, usEST);
 TimeChangeRule *tcr;        //pointer to the time change rule, use to get TZ abbrev
 
