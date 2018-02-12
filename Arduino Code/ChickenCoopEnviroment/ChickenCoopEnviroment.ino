@@ -37,9 +37,9 @@
 #include <Timezone.h>     //https://github.com/JChristensen/Timezone
 #include <sunMoon.h>      //https://github.com/sfrwmaker/sunMoon
 
-
+ 
 // Define firmware version
-#define FIRMWARE_VERSION "0.35"
+#define FIRMWARE_VERSION "0.36"
 
 //#define DEBUG
 
@@ -184,7 +184,7 @@ RTC_DS3231 rtcObj;
 
 // Setup our timezone object
 //US Eastern Time Zone (New York, Detroit)
-TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};    //Daylight time = UTC - 4 hours
+TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};    //Daylight time = UTC - 4 hour
 TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};     //Standard time = UTC - 5 hours
 Timezone usEastern(usEDT, usEST);
 TimeChangeRule *tcr;        //pointer to the time change rule, use to get TZ abbrev
