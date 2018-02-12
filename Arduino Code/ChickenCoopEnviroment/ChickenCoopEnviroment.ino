@@ -39,7 +39,7 @@
 
 
 // Define firmware version
-#define FIRMWARE_VERSION "v.33"
+#define FIRMWARE_VERSION "v.34"
 
 //#define DEBUG
 
