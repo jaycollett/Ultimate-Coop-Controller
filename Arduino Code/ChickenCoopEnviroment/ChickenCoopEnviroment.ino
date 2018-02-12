@@ -317,9 +317,9 @@ void setup() {
   
   // set default status for door, fan, and water heater
   henhousewaterheaterstat->save("OFF"); // sending status update to adafruit.io
-  delay(1200);
+  delay(1150);
   henhousefanstatus->save("OFF");
-  delay(1200);
+  delay(1150);
 
   // Setup stepper motor control
   AFMS.begin();
@@ -376,6 +376,7 @@ void loop() {
       debug("NH3 Sensor Reading: ");
       debugln(NH3Reading);
       henhousenh3levels->save(NH3Reading); // sending status update to adafruit.io
+      delay(1050);
 
       // determine if the level is too high, if so, set alarm bool
       if (NH3Reading >= NH3_ALARM_LEVEL) {
@@ -433,6 +434,7 @@ void loop() {
       pinExpander.digitalWrite(H20_HEAT_LED, HIGH);
       waterHeaterOn = true;
       henhousewaterheaterstat->save("ON"); // sending status update to adafruit.io
+      delay(1050);
       debug("Current water temp is ");
       debug(currentWaterTemp);
       debugln(" degrees. Turning ON water heater.");
@@ -443,6 +445,7 @@ void loop() {
       pinExpander.digitalWrite(H20_HEAT_LED, LOW);
       waterHeaterOn = false;
       henhousewaterheaterstat->save("OFF"); // sending status update to adafruit.io
+      delay(1050);
       debug("Current water temp is ");
       debug(currentWaterTemp);
       debugln(" degrees. Turning OFF water heater.");
@@ -462,23 +465,27 @@ void loop() {
       fanOn = true;
       pinExpander.digitalWrite(FAN_ON_LED, HIGH);
       henhousefanstatus->save("ON"); // sending status update to adafruit.io
+      delay(1050);
     } else if (fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) > 80) && (Celcius2Fahrenheit(bmeInside.readTemperature()) < 90)) {
       // cycle fan off
       digitalWrite(FAN_CTRL_PIN, LOW);
       fanOn = false;
       pinExpander.digitalWrite(FAN_ON_LED, LOW);
       henhousefanstatus->save("OFF"); // sending status update to adafruit.io
+      delay(1050);
     } else if (fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) < 80)) {
       // temp is low enough, turn fan off
       digitalWrite(FAN_CTRL_PIN, LOW);
       fanOn = false;
       pinExpander.digitalWrite(FAN_ON_LED, LOW);
       henhousefanstatus->save("OFF"); // sending status update to adafruit.io
+      delay(1050);
     } else if (!fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) > 90)) {
       digitalWrite(FAN_CTRL_PIN, HIGH);
       fanOn = true;
       pinExpander.digitalWrite(FAN_ON_LED, HIGH);
       henhousefanstatus->save("ON"); // sending status update to adafruit.io
+      delay(1050);
     }
     previousFanCheckMillis = currentMillis; // update the time we last checked the fan status
   }
@@ -583,9 +590,9 @@ void loop() {
     updateOutsideLightLevel();
 
     // update water temp to adafruit.io
-    delay(1000);
+    delay(1050);
     henhousewatertemperature->save(getWaterTemperature());
-
+    delay(1050);
     // print to the serial port the data we are attempting to send to Adafruit.IO for debugging
 #ifdef DEBUG
     printBMEData(bmeInside); // Use a simple function to print out the data (testing)
@@ -649,6 +656,7 @@ void closeDoor() {
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
     henhousedoorstatus->save("CLOSED"); // sending status update to adafruit.io
+    delay(1050);
   }else{
     doorOpen = true;
     myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
@@ -656,6 +664,7 @@ void closeDoor() {
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     henhousedoorstatus->save("ERROR CLOSING"); // sending status update to adafruit.io
+    delay(1050);
   }
 }
 
@@ -685,6 +694,7 @@ void openDoor() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
     henhousedoorstatus->save("OPEN"); // sending status update to adafruit.io
+    delay(1050);
   }else{
     doorOpen = false;
     myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
@@ -693,6 +703,7 @@ void openDoor() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     henhousedoorstatus->save("ERROR OPENING"); // sending status update to adafruit.io
+    delay(1050);
   }
 }
 
@@ -703,7 +714,7 @@ void openDoor() {
 // #############################################################################
 void updateInsideLightLevel() {
   henhouselightlevel->save(getLightLevelReading(LIGHT_PIN_INSIDE));
-  delay(1050);
+  delay(1150);
 }
 
 // #############################################################################
@@ -713,7 +724,7 @@ void updateInsideLightLevel() {
 // #############################################################################
 void updateOutsideLightLevel() {
   chickencoopoutsidelightlevel->save(getLightLevelReading(LIGHT_PIN_OUTSIDE));
-  delay(1050);
+  delay(1150);
 }
 
 // #############################################################################
@@ -733,9 +744,9 @@ void printLightLevel(int lightSensorPin) {
 // #############################################################################
 void updateBMEInsideData(Adafruit_BME280 sensorName) {
   henhousetemp->save(Celcius2Fahrenheit(sensorName.readTemperature()));
-  delay(1050);
+  delay(1150);
   henhousehumidity->save(sensorName.readHumidity());
-  delay(1050);
+  delay(1150);
 }
 
 // #############################################################################
@@ -745,11 +756,11 @@ void updateBMEInsideData(Adafruit_BME280 sensorName) {
 // #############################################################################
 void updateBMEOutsideData(Adafruit_BME280 sensorName) {
   chickencoopoutsidetemperature->save(Celcius2Fahrenheit(sensorName.readTemperature()));
-  delay(1050);
+  delay(1150);
   chickencoopoutsidehumidity->save(sensorName.readHumidity());
-  delay(1050);
+  delay(1150);
   chickencoopoutsidebarometricpressure->save(sensorName.readPressure() / 3386.39F); // we want inches-Hg there are 3,386.39 Pascals to 1 inch Hg
-  delay(1050);
+  delay(1150);
 }
 
 // #############################################################################
