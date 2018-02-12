@@ -551,6 +551,8 @@ void loop() {
   if (updateDisplayDelayCount >= updateDisplayLoop) {
     debugln("Updating oled screen...");
     onBoardDisplayUpdate();
+    // io.run() is required to maintain a connection to adafruit.io
+    io.run();
     updateDisplayDelayCount = 0;
   } else {
     updateDisplayDelayCount++;
@@ -583,9 +585,12 @@ void loop() {
       delay(10000);
       connectAttempts++;
     }
-
+    // io.run() is required to maintain a connection to adafruit.io
+    io.run();
     updateBMEInsideData(bmeInside); // Update adafruit.io with current hen house enviromental readings
     updateInsideLightLevel();
+    // io.run() is required to maintain a connection to adafruit.io
+    io.run();
     updateBMEOutsideData(bmeOutside); // Update adafruit.io with the current ambient sensor readings
     updateOutsideLightLevel();
 
