@@ -10,7 +10,7 @@ before_install:
 install:
   - arduino --install-library "Adafruit MCP23017 Arduino Library,Adafruit BME280 Library,Adafruit Unified Sensor,OneWire"
 script:
-  - arduino --verify --board arduino:samd:arduino_zero_native $PWD/Arduino Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
+  - arduino --verify --board arduino:samd:arduino_zero_native $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
 notifications:
   email:
     on_success: change
