@@ -8,7 +8,7 @@ before_install:
   - sudo mv arduino-1.8.5 /usr/local/share/arduino
   - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
 install:
-  - arduino --install-library "Adafruit_MCP23017,Adafruit_BME280,Adafruit_Sensor,OneWire"
+  - arduino --install-library "Adafruit MCP23017 Arduino Library,Adafruit BME280 Library,Adafruit Unified Sensor,OneWire"
 script:
   - arduino --verify --board arduino:samd:arduino_zero_native $PWD/Arduino Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
 notifications:
