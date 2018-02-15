@@ -1,0 +1,12 @@
+language: c
+sudo: false
+before_install:
+  - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
+install:
+  - arduino --install-library "Adafruit_MCP23017,Adafruit_BME280,Adafruit_Sensor,OneWire"
+script:
+  - build_platform cplayExpress
+notifications:
+  email:
+    on_success: change
+    on_failure: change
