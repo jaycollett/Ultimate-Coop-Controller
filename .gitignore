@@ -2,3 +2,4 @@
 config.h.secret
 eagle.epf
 keys.ino
+config.h.real

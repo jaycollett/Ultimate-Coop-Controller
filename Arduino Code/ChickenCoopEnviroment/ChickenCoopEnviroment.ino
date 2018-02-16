@@ -303,14 +303,20 @@ void setup() {
   bmeInside.begin(0x77);
   bmeOutside.begin(0x76);
 
-  // Connect to Adafruit.IO and wait until connected
-  debugln("Connecting to Adafruit IO");
-  writeToonBoardDisplay("connecting to inet...");
-  io.connect();
-  delay(2000);
-  while ( (io.status() < AIO_CONNECTED) ) {
-    writeToonBoardDisplay("connecting to AIO...");
+  // fire up wifi and attempt to connect to mqtt broker
+  #ifdef WINC_EN
+    pinMode(WINC_EN, OUTPUT);
+    digitalWrite(WINC_EN, HIGH);
+  #endif
+
+  if (WiFi.status() == WL_NO_SHIELD) {
+    writeToonBoardDisplay("wifi module failed to init...");
+    // don't continue:
+    while (true);
   }
+
+  // actually call connect to mqtt broker
+  MQTT_connect();
   
   writeToonBoardDisplay("inet alive...");
   delay(3000);

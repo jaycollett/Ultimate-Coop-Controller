@@ -17,16 +17,35 @@
 #define WIFI_PASS       "XXXXXXXXXXXXXXXXX"
 
 // comment out the following two lines if you are using fona or ethernet
-#include "AdafruitIO_WiFi.h"
-AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, WIFI_SSID, WIFI_PASS);
+#include "Adafruit_MQTT.h"
+#include "Adafruit_MQTT_Client.h"
+#include <Adafruit_WINC1500.h>
 
-/**************************** ETHERNET ************************************/
+/************************* WiFI Setup *****************************/
+#define WINC_CS   8
+#define WINC_IRQ  7
+#define WINC_RST  4
+#define WINC_EN   2     // or, tie EN to VCC
 
-// the AdafruitIO_Ethernet client will work with the following boards:
-//   - Ethernet FeatherWing -> https://www.adafruit.com/products/3201
+Adafruit_WINC1500 WiFi(WINC_CS, WINC_IRQ, WINC_RST);
 
-// uncomment the following two lines for ethernet,
-// and comment out the AdafruitIO_WiFi client in the WIFI section
-//#include "AdafruitIO_Ethernet.h"
-//AdafruitIO_Ethernet io(IO_USERNAME, IO_KEY);
+char ssid[] = "yournetwork";     //  your network SSID (name)
+char pass[] = "yourpassword";    // your network password (use for WPA, or use as key for WEP)
+int keyIndex = 0;                // your network key Index number (needed only for WEP)
 
+int status = WL_IDLE_STATUS;
+
+/************************* Adafruit.io Setup *********************************/
+
+#define AIO_SERVER      "MQTT_SERVER"
+#define AIO_SERVERPORT  1883
+#define AIO_USERNAME    "MQTT_USER"
+#define AIO_KEY         "MQTT_KEY"
+
+//Set up the wifi client
+Adafruit_WINC1500Client client;
+
+Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
+
+// You don't need to change anything below this line!
+#define halt(s) { Serial.println(F( s )); while(1);  }
