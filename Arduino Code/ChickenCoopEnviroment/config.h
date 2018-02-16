@@ -17,17 +17,11 @@
 #define WIFI_PASS       "XXXXXXXXXXXXXXXXX"
 
 // comment out the following two lines if you are using fona or ethernet
+#include <WiFi101.h>
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
-#include <Adafruit_WINC1500.h>
 
-/************************* WiFI Setup *****************************/
-#define WINC_CS   8
-#define WINC_IRQ  7
-#define WINC_RST  4
-#define WINC_EN   2     // or, tie EN to VCC
-
-Adafruit_WINC1500 WiFi(WINC_CS, WINC_IRQ, WINC_RST);
+WiFi.setPins(8,7,4,2);
 
 char ssid[] = "yournetwork";     //  your network SSID (name)
 char pass[] = "yourpassword";    // your network password (use for WPA, or use as key for WEP)
