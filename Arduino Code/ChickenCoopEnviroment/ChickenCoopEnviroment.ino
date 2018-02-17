@@ -36,11 +36,11 @@
 #include <RTClib.h>         //https://github.com/adafruit/RTClib
 #include <Timezone.h>       //https://github.com/JChristensen/Timezone
 #include <sunMoon.h>        //https://github.com/sfrwmaker/sunMoon
- 
-// Define firmware version
-#define FIRMWARE_VERSION "0.40"
 
-//#define DEBUG
+// Define firmware version
+#define FIRMWARE_VERSION "0.41"
+
+#define DEBUG
 
 // Setup our debug printing
 #ifdef DEBUG
@@ -143,7 +143,7 @@ static const unsigned char door_closed_image_bits[] = {
   0x38, 0x00, 0x06, 0x30, 0x00, 0x06, 0x80, 0x00, 0x06, 0x80, 0x00, 0x06,
   0x80, 0x00, 0x06, 0x80, 0xff, 0x07, 0x80, 0xff, 0x07, 0x00, 0x00, 0x00
 };
- 
+
 // Setup some consts and other variables needed through the scope of the sketch
 const byte waterTempSensorAddr[8] = {0x28, 0xFF, 0x74, 0x3F, 0xA4, 0x16, 0x5, 0xF9};
 const long logInterval = 600000;                // interval to update Adafruit IO data (10 mins)
@@ -208,6 +208,17 @@ Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2); // 200 steps per rev o
 // Setup our onboard OLED display
 U8G2_SH1106_128X64_VCOMH0_F_HW_I2C onBoardDisplay(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);
 
+void writeToonBoardDisplay(String textToWrite) {
+  int strLen = textToWrite.length() + 1; // get length plus 1 for null terminator
+  char charToWrite[strLen];
+  textToWrite.toCharArray(charToWrite, strLen);
+
+  onBoardDisplay.clearBuffer();          // clear the internal memory
+  onBoardDisplay.setFont(u8g2_font_6x10_mr);
+  onBoardDisplay.drawStr(10, 40, charToWrite); // write something to the internal memory
+  onBoardDisplay.sendBuffer();          // transfer internal memory to the display
+  //!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
+}  
 
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //                                                        SETUP BLOCK
@@ -215,7 +226,7 @@ U8G2_SH1106_128X64_VCOMH0_F_HW_I2C onBoardDisplay(U8G2_R0, /* clock=*/ SCL, /* d
 void setup() {
 
   // setup feather m0 WiFi1101 pins
-  WiFi.setPins(8,7,4,2);
+  WiFi.setPins(8, 7, 4, 2);
 
   // starting onboard oled display
   onBoardDisplay.begin();
@@ -225,6 +236,7 @@ void setup() {
   Serial1.begin(9600);
 #endif
 
+  debugln("Showing boot screen...");
   // show boot screen and pause a bit
   // !*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
   onBoardDisplay.clearBuffer();                         // clear the internal memory
@@ -266,6 +278,9 @@ void setup() {
   digitalWrite(WATER_HEATER_CTRL_PIN, LOW);
 
   // Setup and init our RTC object
+  debugln("Setting up RTC object...");
+  delay(700);
+  writeToonBoardDisplay("setting rtc...");
   rtcObj.begin();
 
   setSyncProvider(syncProvider);   // the function to get the time from the RTC
@@ -286,20 +301,25 @@ void setup() {
   printTime(usEastern.toLocal(now(), &tcr), tcr -> abbrev);
 #endif
 
+  writeToonBoardDisplay("finding sensors...");
+  delay(700);
   // validate we can communicate with the sensors...
+  debugln("Starting bme sensors...");
   bmeInside.begin(0x77);
   bmeOutside.begin(0x76);
 
   // connect to wifi and mqtt server (this takes care of both, call this in loop as well)
+  writeToonBoardDisplay("connecting to wifi...");
+  delay(700);
   MQTT_connect();
-  
+
   writeToonBoardDisplay("inet alive...");
   delay(3000);
-  
+
   // set default status for door, fan, and water heater
-  mqttclient.publish("Coop/Inside/WaterHeater","Off");
+  mqttclient.publish("Coop/Inside/WaterHeater", "Off");
   delay(150);
-  mqttclient.publish("Coop/Inside/Fan","Off");
+  mqttclient.publish("Coop/Inside/Fan", "Off");
   delay(150);
 
   // Setup stepper motor control
@@ -336,7 +356,7 @@ void setup() {
 //                                                           LOOP BLOCK
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 void loop() {
-  
+
   // ensure wifi and mqtt are connected
   MQTT_connect();
 
@@ -541,7 +561,7 @@ void loop() {
 
     // just make sure we are connected to mqtt broker before trying to publish data
     MQTT_connect();
-    
+
     updateBMEInsideData(bmeInside); // Update adafruit.io with current hen house enviromental readings
     updateInsideLightLevel();
     updateBMEOutsideData(bmeOutside); // Update adafruit.io with the current ambient sensor readings
@@ -572,7 +592,8 @@ void loop() {
 
 // #############################################################################
 //  mqtt Connect function
-//  This function connects adn reconnects as necessary to the MQTT server.
+//  This function connects and reconnects as necessary to the MQTT server and
+//  WiFi.
 //  Should be called in the loop to ensure connectivity
 // #############################################################################
 void MQTT_connect() {
@@ -588,10 +609,15 @@ void MQTT_connect() {
     // wait 10 seconds for connection:
     delay(10000);
   }
+#ifdef DEBUG
+  printCurrentNet();
+  printWiFiData();
+#endif
+
   Serial1.println("Connected to wifi");
-  
+
   // Stop if already connected.
-  if (mqtt.connected()) {
+  if (mqttclient.connected()) {
     return;
   }
 
@@ -612,6 +638,79 @@ void MQTT_connect() {
     }
   }
   Serial1.println("MQTT Connected!");
+}
+
+// #############################################################################
+// printWiFiData
+// This method is used for debugging wifi connections, prints the wifidata
+// to serial1
+// #############################################################################
+void printWiFiData() {
+  // print your WiFi IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial1.print("IP address : ");
+  Serial1.println(ip);
+
+  Serial1.print("Subnet mask: ");
+  Serial1.println((IPAddress)WiFi.subnetMask());
+
+  Serial1.print("Gateway IP : ");
+  Serial1.println((IPAddress)WiFi.gatewayIP());
+
+  // print your MAC address:
+  byte mac[6];
+  WiFi.macAddress(mac);
+  Serial1.print("MAC address: ");
+  Serial1.print(mac[5], HEX);
+  Serial1.print(":");
+  Serial1.print(mac[4], HEX);
+  Serial1.print(":");
+  Serial1.print(mac[3], HEX);
+  Serial1.print(":");
+  Serial1.print(mac[2], HEX);
+  Serial1.print(":");
+  Serial1.print(mac[1], HEX);
+  Serial1.print(":");
+  Serial1.println(mac[0], HEX);
+  Serial1.println();
+}
+
+// ##############################################################################
+// printCurrentNet
+// This method is used for debugging wifi connections, prins wifi client details
+// to serial1
+// ##############################################################################
+void printCurrentNet() {
+  // print the SSID of the network you're attached to:
+  Serial1.print("SSID: ");
+  Serial1.println(WiFi.SSID());
+
+  // print the MAC address of the router you're attached to:
+  byte bssid[6];
+  WiFi.BSSID(bssid);
+  Serial1.print("BSSID: ");
+  Serial1.print(bssid[5], HEX);
+  Serial1.print(":");
+  Serial1.print(bssid[4], HEX);
+  Serial1.print(":");
+  Serial1.print(bssid[3], HEX);
+  Serial1.print(":");
+  Serial1.print(bssid[2], HEX);
+  Serial1.print(":");
+  Serial1.print(bssid[1], HEX);
+  Serial1.print(":");
+  Serial1.println(bssid[0], HEX);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial1.print("signal strength (RSSI): ");
+  Serial1.println(rssi);
+
+  // print the encryption type:
+  byte encryption = WiFi.encryptionType();
+  Serial1.print("Encryption Type: ");
+  Serial1.println(encryption, HEX);
+  Serial1.println();
 }
 
 // #############################################################################
@@ -644,22 +743,22 @@ void closeDoor() {
   debugln("turned on door moving led...");
   debugln("closing door...");
   bool doorTransitionTimedOut = false;
-  
+
   while ((digitalRead(DOOR_CLOSED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, FORWARD, DOUBLE);
     // check to see if the door has been moving for too long, based on the doorTransitionTimeout value
-    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis( )){
+    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis( )) {
       doorTransitionTimedOut = true;
     }
   }
-  if(!doorTransitionTimedOut){
+  if (!doorTransitionTimedOut) {
     doorOpen = false;
     myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
     mqttclient.publish("Coop/Inside/Door", "Closed");
-  }else{
+  } else {
     doorOpen = true;
     myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
@@ -683,11 +782,11 @@ void openDoor() {
 
   while ( (digitalRead(DOOR_OPENED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, BACKWARD, DOUBLE);
-    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis() ){
+    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis() ) {
       doorTransitionTimedOut = true;
     }
   }
-  if(!doorTransitionTimedOut){
+  if (!doorTransitionTimedOut) {
     doorOpen = true;
     myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
@@ -695,7 +794,7 @@ void openDoor() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
     mqttclient.publish("Coop/Inside/Door", "Open");
-  }else{
+  } else {
     doorOpen = false;
     myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
@@ -973,18 +1072,6 @@ void drawExtTemp(int temp) {
   onBoardDisplay.print("O: ");
   onBoardDisplay.setCursor((128 - tempLen), 64);
   onBoardDisplay.print(temp);
-}
-
-void writeToonBoardDisplay(String textToWrite) {
-  int strLen = textToWrite.length() + 1; // get length plus 1 for null terminator
-  char charToWrite[strLen];
-  textToWrite.toCharArray(charToWrite, strLen);
-
-  onBoardDisplay.clearBuffer();          // clear the internal memory
-  onBoardDisplay.setFont(u8g2_font_6x10_mr);
-  onBoardDisplay.drawStr(10, 40, charToWrite); // write something to the internal memory
-  onBoardDisplay.sendBuffer();          // transfer internal memory to the display
-  //!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
 }
 
 bool isAfterSunSet() {
