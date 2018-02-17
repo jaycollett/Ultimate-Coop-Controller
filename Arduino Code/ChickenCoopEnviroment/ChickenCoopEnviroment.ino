@@ -357,7 +357,7 @@ void loop() {
       int NH3Reading = readNH3Sensor();
       debug("NH3 Sensor Reading: ");
       debugln(NH3Reading);
-      mqttclient.publish("Coop/Inside/NH3", NH3Reading);
+      mqttclient.publish("Coop/Inside/NH3", (char*) String(NH3Reading).c_str());
       delay(150);
 
       // determine if the level is too high, if so, set alarm bool
@@ -549,7 +549,7 @@ void loop() {
 
     // update water temp to adafruit.io
     delay(150);
-    mqttclient.publish("Coop/Inside/WaterTemp", getWaterTemperature());
+    mqttclient.publish("Coop/Inside/WaterTemp", (char*) String(getWaterTemperature()).c_str());
 
     // print to the serial port the data we are attempting to send to Adafruit.IO for debugging
 #ifdef DEBUG
@@ -712,7 +712,7 @@ void openDoor() {
 // inside sensor to the cloud IOT system.
 // #############################################################################
 void updateInsideLightLevel() {
-  mqttclient.publish("Coop/Inside/Light", getLightLevelReading(LIGHT_PIN_INSIDE));
+  mqttclient.publish("Coop/Inside/Light", (char*) String(getLightLevelReading(LIGHT_PIN_INSIDE)).c_str());
 }
 
 // #############################################################################
@@ -721,7 +721,7 @@ void updateInsideLightLevel() {
 // outside sensor to the cloud IOT system.
 // #############################################################################
 void updateOutsideLightLevel() {
-  mqttclient.publish("Coop/Outside/Light", getLightLevelReading(LIGHT_PIN_OUTSIDE));
+  mqttclient.publish("Coop/Outside/Light", (char*) String(getLightLevelReading(LIGHT_PIN_OUTSIDE)).c_str());
 }
 
 // #############################################################################
@@ -740,8 +740,8 @@ void printLightLevel(int lightSensorPin) {
 // system for the interior sensor.
 // #############################################################################
 void updateBMEInsideData(Adafruit_BME280 sensorName) {
-  mqttclient.publish("Coop/Inside/Temperature", Celcius2Fahrenheit(sensorName.readTemperature()));
-  mqttclient.publish("Coop/Inside/Humidity", sensorName.readHumidity());
+  mqttclient.publish("Coop/Inside/Temperature", (char*) String(Celcius2Fahrenheit(sensorName.readTemperature())).c_str());
+  mqttclient.publish("Coop/Inside/Humidity", (char*) String(sensorName.readHumidity()).c_str());
 }
 
 // #############################################################################
@@ -750,9 +750,9 @@ void updateBMEInsideData(Adafruit_BME280 sensorName) {
 // system for the exterior sensor.
 // #############################################################################
 void updateBMEOutsideData(Adafruit_BME280 sensorName) {
-  mqttclient.publish("Coop/Outside/Temperature", Celcius2Fahrenheit(sensorName.readTemperature()));
-  mqttclient.publish("Coop/Outside/Humidity", sensorName.readHumidity());
-  mqttclient.publish("Coop/Outside/Pressure", (sensorName.readPressure() / 3386.39F)); // we want inches-Hg there are 3,386.39 Pascals to 1 inch Hg
+  mqttclient.publish("Coop/Outside/Temperature", (char*) String(Celcius2Fahrenheit(sensorName.readTemperature())).c_str());
+  mqttclient.publish("Coop/Outside/Humidity", (char*) String(sensorName.readHumidity()).c_str());
+  mqttclient.publish("Coop/Outside/Pressure", (char*) String(sensorName.readPressure() / 3386.39F).c_str()); // we want inches-Hg there are 3,386.39 Pascals to 1 inch Hg
 }
 
 // #############################################################################
