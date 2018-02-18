@@ -160,7 +160,7 @@ unsigned long previousTempCheckMillis = 0;      // store last time we checked wa
 unsigned long previousDoorCheckMillis = 0;      // store last time we checked door status
 unsigned long previousNH3Millis = 0;            // store last time we logged data
 unsigned long previousFanCheckMillis = 0;       // store last time we checked the fan status
-unsigned long doorTransitionTimeoutMillis = 0;  // store time we started the door transition
+unsigned long doorTransistionStart = 0;         // store time we started the door transition
 
 int waterTemp = 99;
 int insideTemp = 999;
@@ -359,6 +359,7 @@ void loop() {
 
   // ensure wifi and mqtt are connected
   MQTT_connect();
+  mqttclient.loop();
 
   // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   //  this block of code controls the NH3 (Ammonia) sensor. Sensor needs to be preheated for about 24 hours before reading
@@ -601,13 +602,18 @@ void MQTT_connect() {
 
   // attempt to connect to WiFi network:
   while (status != WL_CONNECTED) {
+    // for reconnect end then try to begin
+    WiFi.end();
+    delay(2000);
+    nm_bsp_reset();
+    delay(2000);
     Serial1.print("Attempting to connect to SSID: ");
     Serial1.println(ssid);
     // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
     status = WiFi.begin(ssid, pass);
 
-    // wait 10 seconds for connection:
-    delay(10000);
+    // wait 5 seconds for connection:
+    delay(5000);
   }
 #ifdef DEBUG
   printCurrentNet();
@@ -735,7 +741,7 @@ float readNH3Sensor() {
 // hen house door as well as updating the LED status indicators
 // #############################################################################
 void closeDoor() {
-  doorTransitionTimeoutMillis = millis(); //curent time to compare against our door open/close timeout
+  doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
 
   // step "forward" to close the door by 10 steps then check to see if we are closed, if not loop
   debugln("Close door method called...");
@@ -747,7 +753,7 @@ void closeDoor() {
   while ((digitalRead(DOOR_CLOSED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, FORWARD, DOUBLE);
     // check to see if the door has been moving for too long, based on the doorTransitionTimeout value
-    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis( )) {
+    if ( (millis() - doorTransistionStart < doorTransitionTimeout) ) {
       doorTransitionTimedOut = true;
     }
   }
@@ -764,7 +770,7 @@ void closeDoor() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
-    mqttclient.publish("Coop/Inside/Door", "Error Closing");
+    mqttclient.publish("Coop/Inside/Door", "Close Err");
   }
 }
 
@@ -776,13 +782,14 @@ void closeDoor() {
 void openDoor() {
   // step "backwards" to open the door by 10 steps then check to see if the door is opened, if not loop
 
-  doorTransitionTimeoutMillis = millis(); //curent time to compare against our door open/close timeout
+  doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
+  
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
   bool doorTransitionTimedOut = false;
 
   while ( (digitalRead(DOOR_OPENED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, BACKWARD, DOUBLE);
-    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis() ) {
+    if ( (millis() - doorTransistionStart < doorTransitionTimeout) ) {
       doorTransitionTimedOut = true;
     }
   }
@@ -801,7 +808,7 @@ void openDoor() {
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
-    mqttclient.publish("Coop/Inside/Door", "Error Opening");
+    mqttclient.publish("Coop/Inside/Door", "Open Err");
   }
 }
 
