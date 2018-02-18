@@ -5,7 +5,7 @@ char ssid[] = "xxxxxxxxxxx";     //  your network SSID (name)
 char pass[] = "xxxxxxxxxxx";    // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;                // your network key Index number (needed only for WEP)
 
-char  mqtt_server[] = "xxxxxxxxxx";
+char  mqtt_server[] = "xxxxxxxxxxx";
 char  mqtt_username[] = "xxxxxxxxxx";
 char  mqtt_password[] = "xxxxxxxxxxx";
 
