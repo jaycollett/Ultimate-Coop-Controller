@@ -1,17 +1,19 @@
-#include <Ethernet.h>
+#include <WiFi101.h>
 #include <PubSubClient.h>  //MQTT Client from Nick O'Leary PubSubClient
 
-byte MAC_ADDRESS[] = { 0x90, 0xA2, 0xDA, 0x0D, 0x51, 0xC8 };
+char ssid[] = "xxxxxxxxxxx";     //  your network SSID (name)
+char pass[] = "xxxxxxxxxxx";    // your network password (use for WPA, or use as key for WEP)
+int keyIndex = 0;                // your network key Index number (needed only for WEP)
+
+char  mqtt_server[] = "xxxxxxxxxx";
+char  mqtt_username[] = "xxxxxxxxxx";
+char  mqtt_password[] = "xxxxxxxxxxx";
 
 void callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
 }
 
-char  mqtt_server[] = "192.168.1.12";
-char  mqtt_username[] = "xxxxxx";
-char  mqtt_password[] = "xxxxxxxx";
-
-
-EthernetClient ethClient;
-PubSubClient mqttclient(mqtt_server, 1883, callback, ethClient);
+int status = WL_IDLE_STATUS;
+WiFiClient wificlient;
+PubSubClient mqttclient(mqtt_server, 1883, callback, wificlient);
 
