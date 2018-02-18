@@ -665,7 +665,7 @@ void closeDoor() {
   while ((digitalRead(DOOR_CLOSED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, FORWARD, DOUBLE);
     // check to see if the door has been moving for too long, based on the doorTransitionTimeout value
-    if ( (millis() - doorTransistionStart >= doorTransitionTimeout) ) {
+    if ( (millis() - doorTransistionStart < doorTransitionTimeout) ) {
       doorTransitionTimedOut = true;
     }
   }
@@ -701,7 +701,7 @@ void openDoor() {
 
   while ( (digitalRead(DOOR_OPENED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, BACKWARD, DOUBLE);
-    if ( (millis() - doorTransistionStart >= doorTransitionTimeout) ) {
+    if ( (millis() - doorTransistionStart < doorTransitionTimeout) ) {
       doorTransitionTimedOut = true;
     }
   }
