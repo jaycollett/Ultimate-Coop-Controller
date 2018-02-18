@@ -38,7 +38,7 @@
 #include <sunMoon.h>        //https://github.com/sfrwmaker/sunMoon
 
 // Define firmware version
-#define FIRMWARE_VERSION "0.41"
+#define FIRMWARE_VERSION "0.42"
 
 #define DEBUG
 
@@ -225,9 +225,6 @@ void writeToonBoardDisplay(String textToWrite) {
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 void setup() {
 
-  // setup feather m0 WiFi1101 pins
-  WiFi.setPins(8, 7, 4, 2);
-
   // starting onboard oled display
   onBoardDisplay.begin();
 
@@ -309,8 +306,18 @@ void setup() {
   bmeOutside.begin(0x76);
 
   // connect to wifi and mqtt server (this takes care of both, call this in loop as well)
-  writeToonBoardDisplay("connecting to wifi...");
+  writeToonBoardDisplay("starting network...");
   delay(700);
+
+   writeToonBoardDisplay("starting network...");
+  // start ethernet
+  if (Ethernet.begin(MAC_ADDRESS) == 0)
+  {
+      writeToonBoardDisplay("net init fail...");
+      Serial1.println("Failed to configure Ethernet using DHCP");
+      return;
+  }
+  
   MQTT_connect();
 
   writeToonBoardDisplay("inet alive...");
@@ -600,28 +607,6 @@ void loop() {
 void MQTT_connect() {
   int8_t ret;
 
-  // attempt to connect to WiFi network:
-  while (status != WL_CONNECTED) {
-    // for reconnect end then try to begin
-    WiFi.end();
-    delay(2000);
-    nm_bsp_reset();
-    delay(2000);
-    Serial1.print("Attempting to connect to SSID: ");
-    Serial1.println(ssid);
-    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-    status = WiFi.begin(ssid, pass);
-
-    // wait 5 seconds for connection:
-    delay(5000);
-  }
-#ifdef DEBUG
-  printCurrentNet();
-  printWiFiData();
-#endif
-
-  Serial1.println("Connected to wifi");
-
   // Stop if already connected.
   if (mqttclient.connected()) {
     return;
@@ -644,79 +629,6 @@ void MQTT_connect() {
     }
   }
   Serial1.println("MQTT Connected!");
-}
-
-// #############################################################################
-// printWiFiData
-// This method is used for debugging wifi connections, prints the wifidata
-// to serial1
-// #############################################################################
-void printWiFiData() {
-  // print your WiFi IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial1.print("IP address : ");
-  Serial1.println(ip);
-
-  Serial1.print("Subnet mask: ");
-  Serial1.println((IPAddress)WiFi.subnetMask());
-
-  Serial1.print("Gateway IP : ");
-  Serial1.println((IPAddress)WiFi.gatewayIP());
-
-  // print your MAC address:
-  byte mac[6];
-  WiFi.macAddress(mac);
-  Serial1.print("MAC address: ");
-  Serial1.print(mac[5], HEX);
-  Serial1.print(":");
-  Serial1.print(mac[4], HEX);
-  Serial1.print(":");
-  Serial1.print(mac[3], HEX);
-  Serial1.print(":");
-  Serial1.print(mac[2], HEX);
-  Serial1.print(":");
-  Serial1.print(mac[1], HEX);
-  Serial1.print(":");
-  Serial1.println(mac[0], HEX);
-  Serial1.println();
-}
-
-// ##############################################################################
-// printCurrentNet
-// This method is used for debugging wifi connections, prins wifi client details
-// to serial1
-// ##############################################################################
-void printCurrentNet() {
-  // print the SSID of the network you're attached to:
-  Serial1.print("SSID: ");
-  Serial1.println(WiFi.SSID());
-
-  // print the MAC address of the router you're attached to:
-  byte bssid[6];
-  WiFi.BSSID(bssid);
-  Serial1.print("BSSID: ");
-  Serial1.print(bssid[5], HEX);
-  Serial1.print(":");
-  Serial1.print(bssid[4], HEX);
-  Serial1.print(":");
-  Serial1.print(bssid[3], HEX);
-  Serial1.print(":");
-  Serial1.print(bssid[2], HEX);
-  Serial1.print(":");
-  Serial1.print(bssid[1], HEX);
-  Serial1.print(":");
-  Serial1.println(bssid[0], HEX);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial1.print("signal strength (RSSI): ");
-  Serial1.println(rssi);
-
-  // print the encryption type:
-  byte encryption = WiFi.encryptionType();
-  Serial1.print("Encryption Type: ");
-  Serial1.println(encryption, HEX);
-  Serial1.println();
 }
 
 // #############################################################################
