@@ -153,7 +153,7 @@ const int doorCloseDelay = 1800;                // (1800 seconds = 30 mins) inte
 const long nh3CheckInterval = 600000;           // internal to check door status and action (10 mins)
 const long fanCheckInterval = 650000;           // interval to check fan status and action (15 mins)
 const long nh3BurnInMillis = 14400000;          // 4 hours before we should be able to get "valid" readings from the sensor
-const long doorTransitionTimeout = 45000;       // time in ms to allow door to transition before just shutting down (safety measure)
+const long doorTransitionTimeout = 55000;       // time in ms to allow door to transition before just shutting down (safety measure)
 unsigned long currentMillis;                    // store LOT mcu has been running
 unsigned long previousLogMillis = 0;            // store last time we logged data
 unsigned long previousTempCheckMillis = 0;      // store last time we checked water temp
@@ -219,7 +219,7 @@ void writeToonBoardDisplay(String textToWrite) {
   onBoardDisplay.drawStr(10, 40, charToWrite); // write something to the internal memory
   onBoardDisplay.sendBuffer();          // transfer internal memory to the display
   //!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
-}  
+}
 
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //                                                        SETUP BLOCK
@@ -233,6 +233,7 @@ void setup() {
 #ifdef DEBUG
   Serial1.begin(9600);
 #endif
+
 
   debugln("Showing boot screen...");
   // show boot screen and pause a bit
@@ -308,17 +309,22 @@ void setup() {
 
   // connect to wifi and mqtt server (this takes care of both, call this in loop as well)
   writeToonBoardDisplay("starting network...");
-  delay(700);
+  Ethernet.init(WIZ_CS);
+  delay(1100);
 
-   writeToonBoardDisplay("starting network...");
   // start ethernet
-  if (Ethernet.begin(MAC_ADDRESS) == 0)
+  if (Ethernet.begin(mac) == 0)
   {
-      writeToonBoardDisplay("net init fail...");
-      Serial1.println("Failed to configure Ethernet using DHCP");
-      return;
+    writeToonBoardDisplay("dhcp init fail...");
+    delay(2000);
+    Serial1.println("Failed to configure Ethernet using DHCP");
+
+    Ethernet.begin(mac, ip, dnsServer, gateway, subnet);
+    return;
   }
-  
+
+  delay(2500);
+
   MQTT_connect();
 
   writeToonBoardDisplay("inet alive...");
@@ -704,7 +710,7 @@ void openDoor() {
   // step "backwards" to open the door by 10 steps then check to see if the door is opened, if not loop
 
   doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
-  
+
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
   delay(150);
   pubRetValue = mqttclient.publish("Coop/Inside/Door", "Opening");
@@ -718,9 +724,9 @@ void openDoor() {
       doorTransitionTimedOut = true;
     }
   }
-  
+
   myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
-  
+
   if (!doorTransitionTimedOut) {
     doorOpen = true;
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
@@ -731,7 +737,7 @@ void openDoor() {
     pubRetValue = mqttclient.publish("Coop/Inside/Door", "Open");
     debug("Publish of open door result:");
     debugln(pubRetValue);
-    
+
   } else {
     doorOpen = false;
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
