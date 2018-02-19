@@ -52,7 +52,7 @@
 #endif
 
 // Define pins for SPI (hardware SPI pins) and whatnot
-#define LIGHT_PIN_INSIDE A1
+#define LIGHT_PIN_INSIDE A1 
 #define LIGHT_PIN_OUTSIDE A3
 #define WATER_TEMP_PIN 5
 #define WATER_HEATER_CTRL_PIN 12
@@ -218,7 +218,7 @@ void writeToonBoardDisplay(String textToWrite) {
   onBoardDisplay.drawStr(10, 40, charToWrite); // write something to the internal memory
   onBoardDisplay.sendBuffer();          // transfer internal memory to the display
   //!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
-}  
+}
 
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //                                                        SETUP BLOCK
@@ -335,6 +335,7 @@ void setup() {
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
     mqttclient.publish("Coop/Inside/Door", (char*) String("Closed").c_str());
+    delay(150);
     mqttclient.publish("Coop/Door", (char*) String("Closed").c_str());
   }
   else if ( (digitalRead(DOOR_CLOSED_PIN) == HIGH) && (digitalRead(DOOR_OPENED_PIN) == LOW)) {
@@ -344,6 +345,7 @@ void setup() {
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     mqttclient.publish("Coop/Inside/Door", (char*) String("Open").c_str());
+    delay(150);
     mqttclient.publish("Coop/Door", (char*) String("Open").c_str());
   }
   else {
@@ -448,7 +450,7 @@ void loop() {
       digitalWrite(WATER_HEATER_CTRL_PIN, LOW);
       pinExpander.digitalWrite(H20_HEAT_LED, LOW);
       waterHeaterOn = false;
-      mqttclient.publish("Coop/Inside/WaterHeater", (char*) String("Off").c_str())
+      mqttclient.publish("Coop/Inside/WaterHeater", (char*) String("Off").c_str());
       debug("Current water temp is ");
       debug(currentWaterTemp);
       debugln(" degrees. Turning OFF water heater.");
@@ -467,24 +469,24 @@ void loop() {
       digitalWrite(FAN_CTRL_PIN, HIGH);
       fanOn = true;
       pinExpander.digitalWrite(FAN_ON_LED, HIGH);
-      mqttclient.publish("Coop/Inside/Fan", (char*) String("On").c_str())
+      mqttclient.publish("Coop/Inside/Fan", (char*) String("On").c_str());
     } else if (fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) > 80) && (Celcius2Fahrenheit(bmeInside.readTemperature()) < 90)) {
       // cycle fan off
       digitalWrite(FAN_CTRL_PIN, LOW);
       fanOn = false;
       pinExpander.digitalWrite(FAN_ON_LED, LOW);
-      mqttclient.publish("Coop/Inside/Fan", (char*) String("Off").c_str())
+      mqttclient.publish("Coop/Inside/Fan", (char*) String("Off").c_str());
     } else if (fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) < 80)) {
       // temp is low enough, turn fan off
       digitalWrite(FAN_CTRL_PIN, LOW);
       fanOn = false;
       pinExpander.digitalWrite(FAN_ON_LED, LOW);
-      mqttclient.publish("Coop/Inside/Fan", (char*) String("Off").c_str())
+      mqttclient.publish("Coop/Inside/Fan", (char*) String("Off").c_str());
     } else if (!fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) > 90)) {
       digitalWrite(FAN_CTRL_PIN, HIGH);
       fanOn = true;
       pinExpander.digitalWrite(FAN_ON_LED, HIGH);
-      mqttclient.publish("Coop/Inside/Fan", (char*) String("On").c_str())
+      mqttclient.publish("Coop/Inside/Fan", (char*) String("On").c_str());
     }
     previousFanCheckMillis = currentMillis; // update the time we last checked the fan status
   }
@@ -759,15 +761,16 @@ void closeDoor() {
       doorTransitionTimedOut = true;
     }
   }
-  
+
   myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
-  
+
   if (!doorTransitionTimedOut) {
     doorOpen = false;
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
     mqttclient.publish("Coop/Inside/Door", (char*) String("Closed").c_str());
+    delay(150);
     mqttclient.publish("Coop/Door", (char*) String("Closed").c_str());
   } else {
     doorOpen = true;
@@ -775,6 +778,7 @@ void closeDoor() {
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     mqttclient.publish("Coop/Inside/Door", (char*) String("Close Err").c_str());
+    delay(150);
     mqttclient.publish("Coop/Door", (char*) String("Close Err").c_str());
   }
 }
@@ -788,7 +792,7 @@ void openDoor() {
   // step "backwards" to open the door by 10 steps then check to see if the door is opened, if not loop
 
   doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
-  
+
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
   bool doorTransitionTimedOut = false;
 
@@ -798,17 +802,18 @@ void openDoor() {
       doorTransitionTimedOut = true;
     }
   }
-  
+
   myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
-  
+
   if (!doorTransitionTimedOut) {
     doorOpen = true;
-    
+
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
     mqttclient.publish("Coop/Inside/Door", (char*) String("Open").c_str());
+    delay(150);
     mqttclient.publish("Coop/Door", (char*) String("Open").c_str());
   } else {
     doorOpen = false;
@@ -817,6 +822,7 @@ void openDoor() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     mqttclient.publish("Coop/Inside/Door", (char*) String("Open Err").c_str());
+    delay(150);
     mqttclient.publish("Coop/Door", (char*) String("Open Err").c_str());
   }
 }
