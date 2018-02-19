@@ -148,12 +148,12 @@ static const unsigned char door_closed_image_bits[] = {
 const byte waterTempSensorAddr[8] = {0x28, 0xFF, 0x74, 0x3F, 0xA4, 0x16, 0x5, 0xF9};
 const long logInterval = 600000;                // interval to update Adafruit IO data (10 mins)
 const long tempCheckInterval = 300000;          // internal to check water temp (5 mins)
-const long doorCheckInterval = 30000;           // internal to check door status and action (5 mins)
+const long doorCheckInterval = 300000;           // internal to check door status and action (5 mins)
 const int doorCloseDelay = 1800;                // (1800 seconds = 30 mins) interval to wait before closing door (allows hens to get in at dark or fully light out)
 const long nh3CheckInterval = 600000;           // internal to check door status and action (10 mins)
 const long fanCheckInterval = 650000;           // interval to check fan status and action (15 mins)
 const long nh3BurnInMillis = 14400000;          // 4 hours before we should be able to get "valid" readings from the sensor
-const long doorTransitionTimeout = 45000;       // time in ms to allow door to transition before just shutting down (safety measure)
+const long doorTransitionTimeout = 50000;       // time in ms to allow door to transition before just shutting down (safety measure)
 unsigned long currentMillis;                    // store LOT mcu has been running
 unsigned long previousLogMillis = 0;            // store last time we logged data
 unsigned long previousTempCheckMillis = 0;      // store last time we checked water temp
@@ -412,10 +412,12 @@ void loop() {
       debugln(digitalRead(DOOR_OPENED_PIN));
       if ( (digitalRead(DOOR_CLOSED_PIN) == LOW) && (digitalRead(DOOR_OPENED_PIN) == HIGH)) {
         debugln("Open Door Based on Manual Button Push");
+        previousDoorCheckMillis = millis(); // let the manual override sit until we check the door again 5 mins
         openDoor();
       }
       else if ( (digitalRead(DOOR_CLOSED_PIN) == HIGH) && (digitalRead(DOOR_OPENED_PIN) == LOW)) {
         debugln("Close Door Based on Manual Button Push");
+        previousDoorCheckMillis = millis(); // let the manual override sit until we check the door again 5 mins
         closeDoor();
       }
       else {
@@ -752,6 +754,7 @@ void closeDoor() {
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
   debugln("turned on door moving led...");
   debugln("closing door...");
+  mqttclient.publish("Coop/Inside/Door", (char*) String("Closing").c_str());
   bool doorTransitionTimedOut = false;
 
   while ((digitalRead(DOOR_CLOSED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
@@ -794,6 +797,7 @@ void openDoor() {
   doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
 
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
+  mqttclient.publish("Coop/Inside/Door", (char*) String("Opening").c_str());
   bool doorTransitionTimedOut = false;
 
   while ( (digitalRead(DOOR_OPENED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
