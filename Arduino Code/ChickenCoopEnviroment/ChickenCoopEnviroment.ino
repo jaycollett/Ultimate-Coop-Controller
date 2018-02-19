@@ -38,7 +38,7 @@
 #include <sunMoon.h>        //https://github.com/sfrwmaker/sunMoon
 
 // Define firmware version
-#define FIRMWARE_VERSION "0.42"
+#define FIRMWARE_VERSION "0.46"
 
 #define DEBUG
 
@@ -176,6 +176,7 @@ bool nh3BurnInComplete = false;   // hold status of burn-in for nh3 sensor
 bool fanOn = false;               // bool to hold status of hen house fan
 bool nh3Alarm = false;            // based on nh3 sensor data, is the level too high
 bool freezeAlarm = false;         // based on outside temp, set freeze alarm
+bool pubRetValue = false;         // bool to hold results of mqtt publish commands
 
 
 // Setup our RTC object
@@ -659,6 +660,9 @@ void closeDoor() {
   debugln("Close door method called...");
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
   debugln("turned on door moving led...");
+  pubRetValue = mqttclient.publish("Coop/Inside/Door", "Closing");
+  debug("Publish of closing result:");
+  debugln(pubRetValue);
   debugln("closing door...");
   bool doorTransitionTimedOut = false;
 
@@ -669,20 +673,25 @@ void closeDoor() {
       doorTransitionTimedOut = true;
     }
   }
+  myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
   if (!doorTransitionTimedOut) {
     doorOpen = false;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
-    mqttclient.publish("Coop/Inside/Door", "Closed");
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Closed");
+    debug("Publish of close door ok result:");
+    debugln(pubRetValue);
   } else {
     doorOpen = true;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
-    mqttclient.publish("Coop/Inside/Door", "Close Err");
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Close Err");
+    debug("Publish of close door error result:");
+    debugln(pubRetValue);
   }
 }
 
@@ -697,6 +706,10 @@ void openDoor() {
   doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
   
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
+  delay(150);
+  pubRetValue = mqttclient.publish("Coop/Inside/Door", "Opening");
+  debug("Publish of opening result:");
+  debugln(pubRetValue);
   bool doorTransitionTimedOut = false;
 
   while ( (digitalRead(DOOR_OPENED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
@@ -705,22 +718,30 @@ void openDoor() {
       doorTransitionTimedOut = true;
     }
   }
+  
+  myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
+  
   if (!doorTransitionTimedOut) {
     doorOpen = true;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
-    mqttclient.publish("Coop/Inside/Door", "Open");
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Open");
+    debug("Publish of open door result:");
+    debugln(pubRetValue);
+    
   } else {
     doorOpen = false;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
-    mqttclient.publish("Coop/Inside/Door", "Open Err");
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Open Err");
+    debug("Publish of open door error result:");
+    debugln(pubRetValue);
   }
 }
 
