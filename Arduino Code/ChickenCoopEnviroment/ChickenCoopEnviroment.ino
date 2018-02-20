@@ -680,6 +680,7 @@ void closeDoor() {
     }
   }
   myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
+  MQTT_connect();
   if (!doorTransitionTimedOut) {
     doorOpen = false;
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
@@ -726,6 +727,7 @@ void openDoor() {
   }
 
   myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
+  MQTT_connect();
 
   if (!doorTransitionTimedOut) {
     doorOpen = true;
