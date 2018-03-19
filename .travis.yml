@@ -14,6 +14,8 @@ script:
   - "echo $PWD"
   - "echo $HOME"
   - "ls $PWD"
+  - platformio lib -g install  https://github.com/adafruit/Adafruit_Sensor/archive/master.zip
+  - platformio lib -g install  http://downloads.arduino.cc/libraries/github.com/adafruit/Ethernet2-1.0.4.zip
   - platformio ci --board=$BOARD --lib=$PWD/Arduino\ Code/ChickenCoopEnviroment $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
   
 notifications:
