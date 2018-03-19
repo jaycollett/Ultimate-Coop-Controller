@@ -11,10 +11,16 @@ before_install:
   - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
 install:
   - arduino --pref "boardsmanager.additional.urls=https://adafruit.github.io/arduino-board-index/package_adafruit_index.json" --save-prefs
-  - arduino --install-library "Adafruit MCP23017 Arduino Library","Adafruit BME280 Library","Adafruit Unified Sensor","OneWire"
+  - arduino --install-library "Adafruit MCP23017 Arduino Library","Adafruit BME280 Library","Adafruit Unified Sensor","OneWire" 
+  - arduino --install-boards arduino:samd:arduino_zero_native
   - arduino --install-library USBHost
+  - arduino --board arduino:samd:arduino_zero_native --save-prefs
+  - arduino --pref "compiler.warning_level=all" --save-prefs
 script:
-  - arduino --verify --board arduino:samd $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
+  - "echo $PWD"
+  - "echo $HOME"
+  - "ls $PWD"
+  - arduino -v --verbose-build --verify $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
 notifications:
   email:
     on_success: change
