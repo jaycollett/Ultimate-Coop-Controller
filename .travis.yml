@@ -11,7 +11,12 @@ env:
 - BOARD=adafruit_feather_m0
 
 script:
-- set -eo pipefail;
-  for e in examples/*; do
-    platformio ci --board=$BOARD --lib=. $e/*;
-  done
+  - "echo $PWD"
+  - "echo $HOME"
+  - "ls $PWD"
+  - platformio ci --board=$BOARD --lib=. $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
+  
+notifications:
+  email:
+    on_success: change
+    on_failure: change
