@@ -12,7 +12,7 @@ before_install:
 install:
   - arduino --pref "boardsmanager.additional.urls=https://adafruit.github.io/arduino-board-index/package_adafruit_index.json" --save-prefs
   - arduino --install-library "Adafruit MCP23017 Arduino Library","Adafruit BME280 Library","Adafruit Unified Sensor","OneWire"
-  - arduino --install-boards arduino:samd:adafruit_m0
+  - arduino --install-boards arduino:samd:adafruit_feather_m0
 script:
   - arduino --verify --board arduino:samd $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
 notifications:
