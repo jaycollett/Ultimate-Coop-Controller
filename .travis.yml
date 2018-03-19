@@ -24,6 +24,7 @@ script:
   - platformio lib -g install  https://github.com/sfrwmaker/sunMoon/archive/master.zip
   - platformio lib -g install  https://github.com/JChristensen/Timezone/archive/master.zip
   - platformio lib -g install  https://github.com/adafruit/RTClib/archive/master.zip
+  - platformio lib -g install  http://downloads.arduino.cc/libraries/github.com/PaulStoffregen/OneWire-2.3.4.zip
 
   - platformio ci --board=$BOARD --lib=$PWD/Arduino\ Code/ChickenCoopEnviroment $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
   
