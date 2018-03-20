@@ -30,18 +30,17 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
 #include <Adafruit_MCP23017.h>
-#include <U8g2lib.h>      //https://github.com/olikraus/u8g2
+#include <U8g2lib.h>        //https://github.com/olikraus/u8g2
 #include <Time.h>
 #include <TimeLib.h>
-#include <RTClib.h>       //https://github.com/adafruit/RTClib
-#include <Timezone.h>     //https://github.com/JChristensen/Timezone
-#include <sunMoon.h>      //https://github.com/sfrwmaker/sunMoon
+#include <RTClib.h>         //https://github.com/adafruit/RTClib
+#include <Timezone.h>       //https://github.com/JChristensen/Timezone
+#include <sunMoon.h>        //https://github.com/sfrwmaker/sunMoon
 
- 
 // Define firmware version
-#define FIRMWARE_VERSION "0.37"
+#define FIRMWARE_VERSION "0.46"
 
-//#define DEBUG
+#define DEBUG
 
 // Setup our debug printing
 #ifdef DEBUG
@@ -144,7 +143,7 @@ static const unsigned char door_closed_image_bits[] = {
   0x38, 0x00, 0x06, 0x30, 0x00, 0x06, 0x80, 0x00, 0x06, 0x80, 0x00, 0x06,
   0x80, 0x00, 0x06, 0x80, 0xff, 0x07, 0x80, 0xff, 0x07, 0x00, 0x00, 0x00
 };
- 
+
 // Setup some consts and other variables needed through the scope of the sketch
 const byte waterTempSensorAddr[8] = {0x28, 0xFF, 0x74, 0x3F, 0xA4, 0x16, 0x5, 0xF9};
 const long logInterval = 600000;                // interval to update Adafruit IO data (10 mins)
@@ -154,14 +153,14 @@ const int doorCloseDelay = 1800;                // (1800 seconds = 30 mins) inte
 const long nh3CheckInterval = 600000;           // internal to check door status and action (10 mins)
 const long fanCheckInterval = 650000;           // interval to check fan status and action (15 mins)
 const long nh3BurnInMillis = 14400000;          // 4 hours before we should be able to get "valid" readings from the sensor
-const long doorTransitionTimeout = 45000;       // time in ms to allow door to transition before just shutting down (safety measure)
+const long doorTransitionTimeout = 55000;       // time in ms to allow door to transition before just shutting down (safety measure)
 unsigned long currentMillis;                    // store LOT mcu has been running
 unsigned long previousLogMillis = 0;            // store last time we logged data
 unsigned long previousTempCheckMillis = 0;      // store last time we checked water temp
 unsigned long previousDoorCheckMillis = 0;      // store last time we checked door status
 unsigned long previousNH3Millis = 0;            // store last time we logged data
 unsigned long previousFanCheckMillis = 0;       // store last time we checked the fan status
-unsigned long doorTransitionTimeoutMillis = 0;  // store time we started the door transition
+unsigned long doorTransistionStart = 0;         // store time we started the door transition
 
 int waterTemp = 99;
 int insideTemp = 999;
@@ -177,6 +176,7 @@ bool nh3BurnInComplete = false;   // hold status of burn-in for nh3 sensor
 bool fanOn = false;               // bool to hold status of hen house fan
 bool nh3Alarm = false;            // based on nh3 sensor data, is the level too high
 bool freezeAlarm = false;         // based on outside temp, set freeze alarm
+bool pubRetValue = false;         // bool to hold results of mqtt publish commands
 
 
 // Setup our RTC object
@@ -206,24 +206,20 @@ OneWire  ds(WATER_TEMP_PIN);  // on pin WATER_TEMP_PIN (a 4.7K resistor is neces
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2); // 200 steps per rev on port #2
 
-// Setup our adafruit.io feeds
-AdafruitIO_Feed *henhousetemp = io.feed("hen-house-temp");
-AdafruitIO_Feed *henhouselightlevel = io.feed("hen-house-light-level");
-AdafruitIO_Feed *henhousehumidity = io.feed("hen-house-humidity");
-//AdafruitIO_Feed *henhousebarometricpressure = io.feed(" hen-house-barometric-pressure"); we can only have 10 feeds in the adafruit beta, BOOO
-AdafruitIO_Feed *henhousenh3levels = io.feed("hen-house-nh3-levels");
-AdafruitIO_Feed *chickencoopoutsidetemperature = io.feed("chicken-coop-outside-temperature");
-AdafruitIO_Feed *chickencoopoutsidehumidity = io.feed(" chicken-coop-outside-humidity");
-AdafruitIO_Feed *chickencoopoutsidelightlevel = io.feed("chicken-coop-outside-light-level");
-AdafruitIO_Feed *chickencoopoutsidebarometricpressure = io.feed(" chicken-coop-outside-barometric-pressure");
-AdafruitIO_Feed *henhousewatertemperature = io.feed("hen-house-water-temperature");
-AdafruitIO_Feed *henhousewaterheaterstat = io.feed("hen-house-water-heater-stat");
-AdafruitIO_Feed *henhousedoorstatus = io.feed("hen-house-door-status");
-AdafruitIO_Feed *henhousefanstatus = io.feed("hen-house-fan-status");
-
 // Setup our onboard OLED display
 U8G2_SH1106_128X64_VCOMH0_F_HW_I2C onBoardDisplay(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);
 
+void writeToonBoardDisplay(String textToWrite) {
+  int strLen = textToWrite.length() + 1; // get length plus 1 for null terminator
+  char charToWrite[strLen];
+  textToWrite.toCharArray(charToWrite, strLen);
+
+  onBoardDisplay.clearBuffer();          // clear the internal memory
+  onBoardDisplay.setFont(u8g2_font_6x10_mr);
+  onBoardDisplay.drawStr(10, 40, charToWrite); // write something to the internal memory
+  onBoardDisplay.sendBuffer();          // transfer internal memory to the display
+  //!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
+}
 
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //                                                        SETUP BLOCK
@@ -238,6 +234,8 @@ void setup() {
   Serial1.begin(9600);
 #endif
 
+
+  debugln("Showing boot screen...");
   // show boot screen and pause a bit
   // !*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
   onBoardDisplay.clearBuffer();                         // clear the internal memory
@@ -279,6 +277,9 @@ void setup() {
   digitalWrite(WATER_HEATER_CTRL_PIN, LOW);
 
   // Setup and init our RTC object
+  debugln("Setting up RTC object...");
+  delay(700);
+  writeToonBoardDisplay("setting rtc...");
   rtcObj.begin();
 
   setSyncProvider(syncProvider);   // the function to get the time from the RTC
@@ -299,27 +300,41 @@ void setup() {
   printTime(usEastern.toLocal(now(), &tcr), tcr -> abbrev);
 #endif
 
+  writeToonBoardDisplay("finding sensors...");
+  delay(700);
   // validate we can communicate with the sensors...
+  debugln("Starting bme sensors...");
   bmeInside.begin(0x77);
   bmeOutside.begin(0x76);
 
-  // Connect to Adafruit.IO and wait until connected
-  debugln("Connecting to Adafruit IO");
-  writeToonBoardDisplay("connecting to inet...");
-  io.connect();
-  delay(2000);
-  while ( (io.status() < AIO_CONNECTED) ) {
-    writeToonBoardDisplay("connecting to AIO...");
+  // connect to wifi and mqtt server (this takes care of both, call this in loop as well)
+  writeToonBoardDisplay("starting network...");
+  Ethernet.init(WIZ_CS);
+  delay(1100);
+
+  // start ethernet
+  if (Ethernet.begin(mac) == 0)
+  {
+    writeToonBoardDisplay("dhcp init fail...");
+    delay(2000);
+    Serial1.println("Failed to configure Ethernet using DHCP");
+
+    Ethernet.begin(mac, ip, dnsServer, gateway, subnet);
+    return;
   }
-  
+
+  delay(2500);
+
+  MQTT_connect();
+
   writeToonBoardDisplay("inet alive...");
   delay(3000);
-  
+
   // set default status for door, fan, and water heater
-  henhousewaterheaterstat->save("OFF"); // sending status update to adafruit.io
-  delay(1150);
-  henhousefanstatus->save("OFF");
-  delay(1150);
+  mqttclient.publish("Coop/Inside/WaterHeater", "Off");
+  delay(150);
+  mqttclient.publish("Coop/Inside/Fan", "Off");
+  delay(150);
 
   // Setup stepper motor control
   AFMS.begin();
@@ -333,7 +348,7 @@ void setup() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
-    henhousedoorstatus->save("CLOSED"); // sending status update to adafruit.io
+    mqttclient.publish("Coop/Inside/Door", "Closed");
   }
   else if ( (digitalRead(DOOR_CLOSED_PIN) == HIGH) && (digitalRead(DOOR_OPENED_PIN) == LOW)) {
     debugln("Setting inital door state to OPEN");
@@ -341,7 +356,7 @@ void setup() {
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
-    henhousedoorstatus->save("OPEN"); // sending status update to adafruit.io
+    mqttclient.publish("Coop/Inside/Door", "Open");
   }
   else {
     // well, the door must be stuck inbetween open and close, neither sensor is showing it's position, let's try to close it
@@ -355,8 +370,10 @@ void setup() {
 //                                                           LOOP BLOCK
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 void loop() {
-  // io.run() is required to maintain a connection to adafruit.io
-  io.run();
+
+  // ensure wifi and mqtt are connected
+  MQTT_connect();
+  mqttclient.loop();
 
   // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   //  this block of code controls the NH3 (Ammonia) sensor. Sensor needs to be preheated for about 24 hours before reading
@@ -375,8 +392,8 @@ void loop() {
       int NH3Reading = readNH3Sensor();
       debug("NH3 Sensor Reading: ");
       debugln(NH3Reading);
-      henhousenh3levels->save(NH3Reading); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/NH3", (char*) String(NH3Reading).c_str());
+      delay(150);
 
       // determine if the level is too high, if so, set alarm bool
       if (NH3Reading >= NH3_ALARM_LEVEL) {
@@ -433,8 +450,7 @@ void loop() {
       digitalWrite(WATER_HEATER_CTRL_PIN, HIGH);
       pinExpander.digitalWrite(H20_HEAT_LED, HIGH);
       waterHeaterOn = true;
-      henhousewaterheaterstat->save("ON"); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/WaterHeater", "On");
       debug("Current water temp is ");
       debug(currentWaterTemp);
       debugln(" degrees. Turning ON water heater.");
@@ -444,8 +460,7 @@ void loop() {
       digitalWrite(WATER_HEATER_CTRL_PIN, LOW);
       pinExpander.digitalWrite(H20_HEAT_LED, LOW);
       waterHeaterOn = false;
-      henhousewaterheaterstat->save("OFF"); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/WaterHeater", "Off");
       debug("Current water temp is ");
       debug(currentWaterTemp);
       debugln(" degrees. Turning OFF water heater.");
@@ -464,28 +479,24 @@ void loop() {
       digitalWrite(FAN_CTRL_PIN, HIGH);
       fanOn = true;
       pinExpander.digitalWrite(FAN_ON_LED, HIGH);
-      henhousefanstatus->save("ON"); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/Fan", "On");
     } else if (fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) > 80) && (Celcius2Fahrenheit(bmeInside.readTemperature()) < 90)) {
       // cycle fan off
       digitalWrite(FAN_CTRL_PIN, LOW);
       fanOn = false;
       pinExpander.digitalWrite(FAN_ON_LED, LOW);
-      henhousefanstatus->save("OFF"); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/Fan", "Off");
     } else if (fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) < 80)) {
       // temp is low enough, turn fan off
       digitalWrite(FAN_CTRL_PIN, LOW);
       fanOn = false;
       pinExpander.digitalWrite(FAN_ON_LED, LOW);
-      henhousefanstatus->save("OFF"); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/Fan", "Off");
     } else if (!fanOn && (Celcius2Fahrenheit(bmeInside.readTemperature()) > 90)) {
       digitalWrite(FAN_CTRL_PIN, HIGH);
       fanOn = true;
       pinExpander.digitalWrite(FAN_ON_LED, HIGH);
-      henhousefanstatus->save("ON"); // sending status update to adafruit.io
-      delay(1050);
+      mqttclient.publish("Coop/Inside/Fan", "On");
     }
     previousFanCheckMillis = currentMillis; // update the time we last checked the fan status
   }
@@ -551,8 +562,6 @@ void loop() {
   if (updateDisplayDelayCount >= updateDisplayLoop) {
     debugln("Updating oled screen...");
     onBoardDisplayUpdate();
-    // io.run() is required to maintain a connection to adafruit.io
-    io.run();
     updateDisplayDelayCount = 0;
   } else {
     updateDisplayDelayCount++;
@@ -565,39 +574,18 @@ void loop() {
 
   if (currentMillis - previousLogMillis >= logInterval) {
 
-    // first make sure we are connected to the network and AdaFruit.io
-    // if not, try for 120 seconds and then reboot the feather
-    int connectAttempts = 0;
-    while ( (io.status() < AIO_CONNECTED) ) {
-      if (connectAttempts >= 12) {
-        connectAttempts = 0;
-        WiFi.disconnect();
-        WiFi.end();
-        NVIC_SystemReset();
-        delay(2000);
-        WiFi.begin();
-      }
-      debugln("Connection seems to have been disconnected, attempting reconnect.");
-      debug("Error is: ");
-      debugln(io.status());
-      WiFi.end();
-      io.connect();
-      delay(10000);
-      connectAttempts++;
-    }
-    // io.run() is required to maintain a connection to adafruit.io
-    io.run();
+    // just make sure we are connected to mqtt broker before trying to publish data
+    MQTT_connect();
+
     updateBMEInsideData(bmeInside); // Update adafruit.io with current hen house enviromental readings
     updateInsideLightLevel();
-    // io.run() is required to maintain a connection to adafruit.io
-    io.run();
     updateBMEOutsideData(bmeOutside); // Update adafruit.io with the current ambient sensor readings
     updateOutsideLightLevel();
 
     // update water temp to adafruit.io
-    delay(1050);
-    henhousewatertemperature->save(getWaterTemperature());
-    delay(1050);
+    delay(150);
+    mqttclient.publish("Coop/Inside/WaterTemp", (char*) String(getWaterTemperature()).c_str());
+
     // print to the serial port the data we are attempting to send to Adafruit.IO for debugging
 #ifdef DEBUG
     printBMEData(bmeInside); // Use a simple function to print out the data (testing)
@@ -616,6 +604,40 @@ void loop() {
 // &$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$
 // &$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$&$
 
+
+// #############################################################################
+//  mqtt Connect function
+//  This function connects and reconnects as necessary to the MQTT server and
+//  WiFi.
+//  Should be called in the loop to ensure connectivity
+// #############################################################################
+void MQTT_connect() {
+  int8_t ret;
+
+  // Stop if already connected.
+  if (mqttclient.connected()) {
+    return;
+  }
+
+  Serial1.print("Connecting to MQTT... ");
+
+  // Loop until we're reconnected
+  while (!mqttclient.connected()) {
+    Serial1.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (mqttclient.connect(mqtt_server, mqtt_username, mqtt_password)) {
+      Serial1.println("connected");
+    } else {
+      Serial1.print("failed, rc=");
+      Serial1.print(mqttclient.state());
+      Serial1.println(" try again in 2 seconds");
+      // Wait 2 seconds before retrying
+      delay(2000);
+    }
+  }
+  Serial1.println("MQTT Connected!");
+}
+
 // #############################################################################
 //  readNH3Sensor
 //  This method will read the NH3 sensor analog value and return a float value
@@ -624,9 +646,9 @@ void loop() {
 float readNH3Sensor() {
   float sensorReadings = 0.0;
   sensorReadings = analogRead(NH3_GAS_PIN);
-  delay(600);
+  delay(550);
   sensorReadings += analogRead(NH3_GAS_PIN);
-  delay(600);
+  delay(550);
   sensorReadings += analogRead(NH3_GAS_PIN);
 
   return (sensorReadings / 3.0);
@@ -638,38 +660,45 @@ float readNH3Sensor() {
 // hen house door as well as updating the LED status indicators
 // #############################################################################
 void closeDoor() {
-  doorTransitionTimeoutMillis = millis(); //curent time to compare against our door open/close timeout
+  doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
 
   // step "forward" to close the door by 10 steps then check to see if we are closed, if not loop
   debugln("Close door method called...");
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
   debugln("turned on door moving led...");
+  pubRetValue = mqttclient.publish("Coop/Inside/Door", "Closing");
+  debug("Publish of closing result:");
+  debugln(pubRetValue);
   debugln("closing door...");
   bool doorTransitionTimedOut = false;
-  
+
   while ((digitalRead(DOOR_CLOSED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, FORWARD, DOUBLE);
     // check to see if the door has been moving for too long, based on the doorTransitionTimeout value
-    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis( )){
+    if ( (millis() - doorTransistionStart >= doorTransitionTimeout) ) {
       doorTransitionTimedOut = true;
     }
   }
-  if(!doorTransitionTimedOut){
+  myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
+  MQTT_connect();
+  if (!doorTransitionTimedOut) {
     doorOpen = false;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, HIGH);
-    henhousedoorstatus->save("CLOSED"); // sending status update to adafruit.io
-    delay(1050);
-  }else{
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Closed");
+    debug("Publish of close door ok result:");
+    debugln(pubRetValue);
+  } else {
     doorOpen = true;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
-    henhousedoorstatus->save("ERROR CLOSING"); // sending status update to adafruit.io
-    delay(1050);
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Close Err");
+    debug("Publish of close door error result:");
+    debugln(pubRetValue);
   }
 }
 
@@ -681,34 +710,46 @@ void closeDoor() {
 void openDoor() {
   // step "backwards" to open the door by 10 steps then check to see if the door is opened, if not loop
 
-  doorTransitionTimeoutMillis = millis(); //curent time to compare against our door open/close timeout
+  doorTransistionStart = millis(); //curent time to compare against our door open/close timeout
+
   pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
+  delay(150);
+  pubRetValue = mqttclient.publish("Coop/Inside/Door", "Opening");
+  debug("Publish of opening result:");
+  debugln(pubRetValue);
   bool doorTransitionTimedOut = false;
 
   while ( (digitalRead(DOOR_OPENED_PIN) == HIGH) && ( !doorTransitionTimedOut )) {
     myMotor->step(10, BACKWARD, DOUBLE);
-    if ( (doorTransitionTimeoutMillis + doorTransitionTimeout) < millis() ){
+    if ( (millis() - doorTransistionStart >= doorTransitionTimeout) ) {
       doorTransitionTimedOut = true;
     }
   }
-  if(!doorTransitionTimedOut){
+
+  myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
+  MQTT_connect();
+
+  if (!doorTransitionTimedOut) {
     doorOpen = true;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     pinExpander.digitalWrite(DOOR_MOVING_LED, LOW);
     pinExpander.digitalWrite(DOOR_OPEN_LED, HIGH);
-    henhousedoorstatus->save("OPEN"); // sending status update to adafruit.io
-    delay(1050);
-  }else{
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Open");
+    debug("Publish of open door result:");
+    debugln(pubRetValue);
+
+  } else {
     doorOpen = false;
-    myMotor->release(); //this remove holding torque by cutting power to the coils...keeps the motor from getting wicked hot
     pinExpander.digitalWrite(BELOW_25_LED, LOW);
     pinExpander.digitalWrite(DOOR_CLOSED_LED, LOW);
     pinExpander.digitalWrite(DOOR_MOVING_LED, HIGH);
     pinExpander.digitalWrite(DOOR_OPEN_LED, LOW);
-    henhousedoorstatus->save("ERROR OPENING"); // sending status update to adafruit.io
-    delay(1050);
+    delay(150);
+    pubRetValue = mqttclient.publish("Coop/Inside/Door", "Open Err");
+    debug("Publish of open door error result:");
+    debugln(pubRetValue);
   }
 }
 
@@ -718,8 +759,7 @@ void openDoor() {
 // inside sensor to the cloud IOT system.
 // #############################################################################
 void updateInsideLightLevel() {
-  henhouselightlevel->save(getLightLevelReading(LIGHT_PIN_INSIDE));
-  delay(1150);
+  mqttclient.publish("Coop/Inside/Light", (char*) String(getLightLevelReading(LIGHT_PIN_INSIDE)).c_str());
 }
 
 // #############################################################################
@@ -728,8 +768,7 @@ void updateInsideLightLevel() {
 // outside sensor to the cloud IOT system.
 // #############################################################################
 void updateOutsideLightLevel() {
-  chickencoopoutsidelightlevel->save(getLightLevelReading(LIGHT_PIN_OUTSIDE));
-  delay(1150);
+  mqttclient.publish("Coop/Outside/Light", (char*) String(getLightLevelReading(LIGHT_PIN_OUTSIDE)).c_str());
 }
 
 // #############################################################################
@@ -748,10 +787,8 @@ void printLightLevel(int lightSensorPin) {
 // system for the interior sensor.
 // #############################################################################
 void updateBMEInsideData(Adafruit_BME280 sensorName) {
-  henhousetemp->save(Celcius2Fahrenheit(sensorName.readTemperature()));
-  delay(1150);
-  henhousehumidity->save(sensorName.readHumidity());
-  delay(1150);
+  mqttclient.publish("Coop/Inside/Temperature", (char*) String(Celcius2Fahrenheit(sensorName.readTemperature())).c_str());
+  mqttclient.publish("Coop/Inside/Humidity", (char*) String(sensorName.readHumidity()).c_str());
 }
 
 // #############################################################################
@@ -760,12 +797,9 @@ void updateBMEInsideData(Adafruit_BME280 sensorName) {
 // system for the exterior sensor.
 // #############################################################################
 void updateBMEOutsideData(Adafruit_BME280 sensorName) {
-  chickencoopoutsidetemperature->save(Celcius2Fahrenheit(sensorName.readTemperature()));
-  delay(1150);
-  chickencoopoutsidehumidity->save(sensorName.readHumidity());
-  delay(1150);
-  chickencoopoutsidebarometricpressure->save(sensorName.readPressure() / 3386.39F); // we want inches-Hg there are 3,386.39 Pascals to 1 inch Hg
-  delay(1150);
+  mqttclient.publish("Coop/Outside/Temperature", (char*) String(Celcius2Fahrenheit(sensorName.readTemperature())).c_str());
+  mqttclient.publish("Coop/Outside/Humidity", (char*) String(sensorName.readHumidity()).c_str());
+  mqttclient.publish("Coop/Outside/Pressure", (char*) String(sensorName.readPressure() / 3386.39F).c_str()); // we want inches-Hg there are 3,386.39 Pascals to 1 inch Hg
 }
 
 // #############################################################################
@@ -986,18 +1020,6 @@ void drawExtTemp(int temp) {
   onBoardDisplay.print("O: ");
   onBoardDisplay.setCursor((128 - tempLen), 64);
   onBoardDisplay.print(temp);
-}
-
-void writeToonBoardDisplay(String textToWrite) {
-  int strLen = textToWrite.length() + 1; // get length plus 1 for null terminator
-  char charToWrite[strLen];
-  textToWrite.toCharArray(charToWrite, strLen);
-
-  onBoardDisplay.clearBuffer();          // clear the internal memory
-  onBoardDisplay.setFont(u8g2_font_6x10_mr);
-  onBoardDisplay.drawStr(10, 40, charToWrite); // write something to the internal memory
-  onBoardDisplay.sendBuffer();          // transfer internal memory to the display
-  //!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
 }
 
 bool isAfterSunSet() {

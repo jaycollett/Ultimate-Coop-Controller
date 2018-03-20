@@ -1,16 +1,35 @@
-language: c
-before_install:
-  - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_1.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :1 -ac -screen 0 1280x1024x16"
-  - sleep 3
-  - export DISPLAY=:1.0
-  - wget http://downloads.arduino.cc/arduino-1.8.5-linux64.tar.xz
-  - tar xf arduino-1.8.5-linux64.tar.xz
-  - sudo mv arduino-1.8.5 /usr/local/share/arduino
-  - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
+language: python
+
+cache:
+  directories:
+  - "~/.platformio"
+
 install:
-  - arduino --install-library "Adafruit MCP23017 Arduino Library,Adafruit BME280 Library,Adafruit Unified Sensor,OneWire"
+- pip install -U platformio
+
+env:
+- BOARD=adafruit_feather_m0
+
 script:
-  - arduino --verify --board arduino:samd:arduino_zero_native $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
+  - "echo $PWD"
+  - "echo $HOME"
+  - "ls $PWD"
+  - pio lib install "Adafruit Unified Sensor"
+  - pio lib install "Ethernet2"
+  - pio lib install "PubSubClient"
+  - pio lib install "Adafruit BME280 Library"
+  - pio lib install "Adafruit Motor Shield library"
+  - pio lib install "Adafruit MCP23017 Arduino Library"
+  - platformio lib -g install  https://github.com/sfrwmaker/sunMoon/archive/master.zip
+  - platformio lib -g install  https://github.com/JChristensen/Timezone/archive/master.zip
+  - pio lib install "RTClib"
+  - pio lib install "MAX31850 OneWire"
+  - pio lib install "Adafruit Motor Shield V2 Library"
+  - pio lib install "U8g2"
+  - pio lib install "Time"
+
+  - platformio ci --board=$BOARD --lib=$PWD/Arduino\ Code/ChickenCoopEnviroment $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
+  
 notifications:
   email:
     on_success: change

@@ -1,32 +1,25 @@
-/************************ Adafruit IO Config *******************************/
+#include <Ethernet2.h>
+#include <PubSubClient.h>  //MQTT Client from Nick O'Leary PubSubClient
 
-// visit io.adafruit.com if you need to create an account,
-// or if you need your Adafruit IO key.
-#define IO_USERNAME    "XXXXXXXXXXXXXXXX"
-#define IO_KEY         "CCCCCCCCCCCCCCCCCCCCCCCC"
+byte mac[] = { 0xDE, 0xFD, 0xBE, 0xEF, 0xFE, 0xED };  
 
-/******************************* WIFI **************************************/
+void callback(char* topic, byte* payload, unsigned int length) {
+  // handle message arrived
+}
 
-// the AdafruitIO_WiFi client will work with the following boards:
-//   - HUZZAH ESP8266 Breakout -> https://www.adafruit.com/products/2471
-//   - Feather HUZZAH ESP8266 -> https://www.adafruit.com/products/2821
-//   - Feather M0 WiFi -> https://www.adafruit.com/products/3010
-//   - Feather WICED -> https://www.adafruit.com/products/3056
+char  mqtt_server[] = "192.168.0.5";
+char  mqtt_username[] = "chickenCoop";
+char  mqtt_password[] = "chickenClient01!";
 
-#define WIFI_SSID       "XXXXXXXXXXXXXX"
-#define WIFI_PASS       "XXXXXXXXXXXXXXXXX"
+#define WIZ_CS 10
 
-// comment out the following two lines if you are using fona or ethernet
-#include "AdafruitIO_WiFi.h"
-AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, WIFI_SSID, WIFI_PASS);
+EthernetClient ethClient;
+// in case dhcp fails
+IPAddress dnsServer(192, 168, 0, 20);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 255, 0);
+IPAddress ip(192, 168, 0, 244);
 
-/**************************** ETHERNET ************************************/
 
-// the AdafruitIO_Ethernet client will work with the following boards:
-//   - Ethernet FeatherWing -> https://www.adafruit.com/products/3201
-
-// uncomment the following two lines for ethernet,
-// and comment out the AdafruitIO_WiFi client in the WIFI section
-//#include "AdafruitIO_Ethernet.h"
-//AdafruitIO_Ethernet io(IO_USERNAME, IO_KEY);
+PubSubClient mqttclient(mqtt_server, 1883, callback, ethClient);
 
