@@ -14,19 +14,19 @@ script:
   - "echo $PWD"
   - "echo $HOME"
   - "ls $PWD"
-  - platformio lib -g install  https://github.com/adafruit/Adafruit_Sensor/archive/master.zip
-  - platformio lib -g install  http://downloads.arduino.cc/libraries/github.com/adafruit/Ethernet2-1.0.4.zip
-  - platformio lib -g install  http://downloads.arduino.cc/libraries/github.com/knolleary/PubSubClient-2.6.0.zip
-  - platformio lib -g install  https://github.com/adafruit/Adafruit_BME280_Library/archive/master.zip
-  - platformio lib -g install  https://github.com/adafruit/Adafruit-Motor-Shield-library/archive/master.zip
-  - platformio lib -g install  https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library/archive/master.zip
-  - platformio lib -g install  https://github.com/olikraus/u8glib/archive/master.zip
+  - pio lib install "Adafruit Unified Sensor"
+  - pio lib install "Ethernet2"
+  - pio lib install "PubSubClient"
+  - pio lib install "Adafruit BME280 Library"
+  - pio lib install "Adafruit Motor Shield library"
+  - pio lib install "Adafruit MCP23017 Arduino Library"
   - platformio lib -g install  https://github.com/sfrwmaker/sunMoon/archive/master.zip
   - platformio lib -g install  https://github.com/JChristensen/Timezone/archive/master.zip
-  - platformio lib -g install  https://github.com/adafruit/RTClib/archive/master.zip
-  - platformio lib -g install  http://downloads.arduino.cc/libraries/github.com/PaulStoffregen/OneWire-2.3.4.zip
-  - platformio lib -g install  https://github.com/adafruit/Adafruit_Motor_Shield_V2_Library/archive/master.zip
+  - pio lib install "RTClib"
+  - pio lib install "MAX31850 OneWire"
+  - pio lib install "Adafruit Motor Shield V2 Library"
   - pio lib install "U8g2"
+  - pio lib install "Time"
 
   - platformio ci --board=$BOARD --lib=$PWD/Arduino\ Code/ChickenCoopEnviroment $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
   
