@@ -26,6 +26,7 @@ script:
   - platformio lib -g install  https://github.com/adafruit/RTClib/archive/master.zip
   - platformio lib -g install  http://downloads.arduino.cc/libraries/github.com/PaulStoffregen/OneWire-2.3.4.zip
   - platformio lib -g install  https://github.com/adafruit/Adafruit_Motor_Shield_V2_Library/archive/master.zip
+  - pio lib install "U8g2"
 
   - platformio ci --board=$BOARD --lib=$PWD/Arduino\ Code/ChickenCoopEnviroment $PWD/Arduino\ Code/ChickenCoopEnviroment/ChickenCoopEnviroment.ino
   
