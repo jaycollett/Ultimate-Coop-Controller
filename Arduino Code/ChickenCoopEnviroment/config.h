@@ -10,6 +10,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 char  mqtt_server[] = "192.168.0.5";
 char  mqtt_username[] = "chickenCoop";
 char  mqtt_password[] = "chickenClient01!";
+char  mqtt_clientid[] = "chickenCoop";
 
 #define WIZ_CS 10
 
