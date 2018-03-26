@@ -625,7 +625,7 @@ void MQTT_connect() {
   while (!mqttclient.connected()) {
     Serial1.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (mqttclient.connect(mqtt_server, mqtt_username, mqtt_password)) {
+    if (mqttclient.connect(mqtt_clientid, mqtt_username, mqtt_password)) {
       Serial1.println("connected");
     } else {
       Serial1.print("failed, rc=");
